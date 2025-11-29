@@ -428,4 +428,4 @@ class OrganizationAnalyticsAdmin(admin.ModelAdmin):
 
 
 # Register the analytics view
-admin.site.register([OrganizationAnalyticsAdmin])
+#admin.site.register([OrganizationAnalyticsAdmin])

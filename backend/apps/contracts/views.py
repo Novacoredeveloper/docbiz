@@ -8,15 +8,19 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import (
     Contract, ContractTemplate, LegalReferenceLibrary, 
-    ContractParty, SignatureField, ContractEvent, LLMUsage
+    ContractParty, SignatureField, ContractEvent
 )
+
+from apps.llm.models import LLMUsage
 from .serializers import (
     ContractSerializer, ContractTemplateSerializer,
     LegalReferenceSerializer, ContractPartySerializer,
     SignatureFieldSerializer, ContractEventSerializer,
-    LLMUsageSerializer, ClauseGenerationSerializer,
-    ContractEditSerializer, ContractSendSerializer
+    ClauseGenerationSerializer,ContractEditSerializer, 
+    ContractSendSerializer,
 )
+from apps.llm.serializers import LLMUsageSerializer
+
 from .llm_service import LLMService
 
 

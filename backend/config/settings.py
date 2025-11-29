@@ -1,18 +1,50 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Initialize environment variables
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+# Load environment variables from .env file if it exists
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key, value)
 
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-in-production')
-DEBUG = env.bool('DEBUG', default=True)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
+# Helper functions to replace django-environ functionality
+def get_env(key, default=None):
+    return os.environ.get(key, default)
+
+def get_env_bool(key, default=False):
+    value = os.environ.get(key, '')
+    if value.lower() in ('true', '1', 'yes', 'on'):
+        return True
+    elif value.lower() in ('false', '0', 'no', 'off'):
+        return False
+    return default
+
+def get_env_int(key, default=0):
+    try:
+        return int(os.environ.get(key, default))
+    except (ValueError, TypeError):
+        return default
+
+def get_env_list(key, default=None):
+    if default is None:
+        default = []
+    value = os.environ.get(key, '')
+    if value:
+        return [item.strip() for item in value.split(',')]
+    return default
+
+# Security settings
+SECRET_KEY = get_env('SECRET_KEY', 'django-insecure-change-in-production')
+DEBUG = get_env_bool('DEBUG', True)
+ALLOWED_HOSTS = get_env_list('ALLOWED_HOSTS', ['localhost', '127.0.0.1', '0.0.0.0'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -42,6 +74,8 @@ INSTALLED_APPS = [
     'apps.llm',
     'apps.billing',
     'apps.admin_console',
+    
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -79,7 +113,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': env.db('DATABASE_URL', default='postgresql://docbiz:docbiz123@localhost:5432/docbiz')
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': get_env('DB_NAME', 'docbiz_db'),
+        'USER': get_env('DB_USER', 'docbiz_user'),
+        'PASSWORD': get_env('DB_PASSWORD', 'docbiz123'),
+        'HOST': get_env('DB_HOST', 'localhost'),
+        'PORT': get_env('DB_PORT', '5432'),
+        'CONN_MAX_AGE': get_env_int('DB_CONN_MAX_AGE', 0),
+        'OPTIONS': {
+            'sslmode': get_env('DB_SSL_MODE', 'prefer'),
+        }
+    }
 }
 
 # Password validation
@@ -120,6 +165,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # Django REST Framework
+# config/settings.py
+
+# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -148,7 +196,52 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/hour',
-    }
+    },
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',  # For drf-yasg
+}
+
+# drf-yasg Configuration
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': '''
+            JWT Authentication. 
+            Example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            '''
+        }
+    },
+    'USE_SESSION_AUTH': False,  # Set to True if you also use session auth
+    'JSON_EDITOR': True,  # Enable JSON editor
+    'DEEP_LINKING': True,  # Enable deep linking for tags and operations
+    'PERSIST_AUTHORIZATION': True,  # Persist authorization when browser is closed
+    'REFETCH_SCHEMA_ON_LOGOUT': True,  # Refetch schema after logout
+    'VALIDATOR_URL': None,  # Disable schema validator (can be slow)
+    
+    # UI Customization
+    'DOC_EXPANSION': 'none',  # ['none', 'list', 'full']
+    'FILTER': True,  # Enable filter box
+    'SHOW_REQUEST_HEADERS': True,
+    'OPERATIONS_SORTER': 'alpha',  # ['alpha', 'method']
+    'TAGS_SORTER': 'alpha',
+    'DEFAULT_MODEL_RENDERING': 'example',  # ['example', 'model']
+    'DEFAULT_MODEL_DEPTH': 2,
+    
+    # For JWT support
+    'APIS_SORTER': 'alpha',
+    'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete', 'patch'],
+}
+
+# Optional: Redoc settings
+REDOC_SETTINGS = {
+    'LAZY_RENDERING': True,
+    'HIDE_HOSTNAME': False,
+    'EXPAND_RESPONSES': ['200', '201'],
+    'PATH_IN_MIDDLE': True,
+    'NATIVE_SCROLLBARS': False,
+    'REQUIRED_PROPS_FIRST': True,
 }
 
 # JWT Settings
@@ -164,7 +257,7 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+CORS_ALLOWED_ORIGINS = get_env_list('CORS_ALLOWED_ORIGINS', [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ])
@@ -176,28 +269,33 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
 # Field Encryption
-FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='your-32-char-encryption-key-here')
+FIELD_ENCRYPTION_KEY = get_env('FIELD_ENCRYPTION_KEY', 'your-32-char-encryption-key-here')
 
 # Email
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='DocBiz <noreply@docbiz.com>')
+EMAIL_BACKEND = get_env('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = get_env('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = get_env_int('EMAIL_PORT', 587)
+EMAIL_USE_TLS = get_env_bool('EMAIL_USE_TLS', True)
+EMAIL_HOST_USER = get_env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = get_env('DEFAULT_FROM_EMAIL', 'DocBiz <noreply@docbiz.com>')
 
 # LLM Configuration
-OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
-ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default='')
-LLM_DEFAULT_MODEL = env('LLM_DEFAULT_MODEL', default='gpt-4')
+OPENAI_API_KEY = get_env('OPENAI_API_KEY', '')
+ANTHROPIC_API_KEY = get_env('ANTHROPIC_API_KEY', '')
+GEMINI_API_KEY = get_env('GEMINI_API_KEY', '')
+LLM_DEFAULT_PROVIDER = get_env('LLM_DEFAULT_PROVIDER', 'gemini')
+LLM_DEFAULT_MODEL = get_env('LLM_DEFAULT_MODEL', 'gemini-pro')
 
 # Audit Log
 AUDITLOG_INCLUDE_ALL_MODELS = False
 
 # Phone Number
 PHONENUMBER_DEFAULT_REGION = 'US'
-# Gemini Configuration
-GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
-LLM_DEFAULT_PROVIDER = env('LLM_DEFAULT_PROVIDER', default='gemini')
-LLM_DEFAULT_MODEL = env('LLM_DEFAULT_MODEL', default='gemini-pro')
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'DocBiz API',
+    'DESCRIPTION': 'Document Business Intelligence Platform',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}

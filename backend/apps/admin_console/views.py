@@ -11,7 +11,8 @@ from datetime import timedelta
 
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.contracts.models import Contract, LLMUsage
+from apps.contracts.models import Contract
+from apps.llm.models import LLMUsage
 from apps.billing.models import OrganizationSubscription, Invoice
 from apps.llm.models import LLMProvider, LLMModel
 from .serializers import (

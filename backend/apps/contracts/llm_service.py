@@ -3,7 +3,8 @@ from anthropic import Anthropic
 import json
 from django.conf import settings
 from django.utils import timezone
-from .models import LLMUsage, LegalReferenceLibrary
+from .models import LegalReferenceLibrary
+from apps.llm.models import LLMUsage
 
 
 class LLMService:

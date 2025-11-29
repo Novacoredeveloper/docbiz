@@ -438,7 +438,7 @@ class BillingAnalyticsAdmin(admin.ModelAdmin):
 
 
 # Register the billing analytics view
-admin.site.register([BillingAnalyticsAdmin])
+#admin.site.register([BillingAnalyticsAdmin])
 
 
 # Custom admin filters

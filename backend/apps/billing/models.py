@@ -5,6 +5,7 @@ from encrypted_model_fields.fields import EncryptedCharField
 from django.utils.translation import gettext_lazy as _
 import uuid
 from decimal import Decimal
+from django.utils import timezone
 
 
 class SubscriptionPlan(SafeDeleteModel):
