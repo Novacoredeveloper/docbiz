@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Contract, ContractTemplate, LegalReferenceLibrary,
-    ContractParty, SignatureField, ContractEvent, LLMUsage
+    ContractParty, SignatureField, ContractEvent
 )
 
 
@@ -55,12 +55,4 @@ class ContractEventAdmin(admin.ModelAdmin):
     list_display = ['contract', 'event_type', 'actor', 'created_at']
     list_filter = ['event_type', 'created_at']
     search_fields = ['contract__title', 'description']
-    readonly_fields = ['uuid', 'created_at']
-
-
-@admin.register(LLMUsage)
-class LLMUsageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'feature', 'provider', 'tokens_total', 'created_at']
-    list_filter = ['feature', 'provider', 'created_at']
-    search_fields = ['user__email', 'contract__title']
     readonly_fields = ['uuid', 'created_at']

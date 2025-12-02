@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.contracts.models import Contract, LLMUsage
+from apps.contracts.models import Contract
+from apps.llm.models import LLMUsage
 from apps.billing.models import OrganizationSubscription, Invoice
 
 
